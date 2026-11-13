@@ -6,7 +6,7 @@
 #   bash scripts/run_all.sh --quick    # smoke test for the analyses (2 seeds, 200 replicates)
 #
 # Optional external datasets (analysis e2_5 / e3_1): set MDVR_ROOT, IPVS_ROOT, COSWARA_ROOT.
-set -uo pipefail
+set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 : "${B2AI_ROOT:?Set B2AI_ROOT to the Bridge2AI Voice v3.0.0 directory}"
@@ -15,7 +15,21 @@ PY="${PY:-python}"
 QUICK=("$@")
 mkdir -p results/logs
 
-step() { echo "=== $1"; shift; if "$@" > "results/logs/$(echo "$1 $2" | tr ' /' '__').log" 2>&1; then echo "    ok"; else echo "    FAILED"; fi; }
+step() {
+    local name="$1"
+    shift
+    local log="results/logs/${name}.log"
+
+    echo "=== ${name}"
+
+    if "$@" > "$log" 2>&1; then
+        echo "  OK"
+    else
+        echo "  FAILED: ${name}"
+        echo "  See ${log}"
+        return 1
+    fi
+}
 
 # 1. Data products (manifest, participant-disjoint folds, recording embedding caches)
 step covariates   $PY scripts/make_covariates.py --b2ai-root "$B2AI_ROOT"

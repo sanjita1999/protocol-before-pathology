@@ -85,7 +85,8 @@ def main() -> int:
     ns = C.finalize_cli(p.parse_args())
     args = C.args_from_cli(ns)
     data = C.load_data(ns.b2ai_root, attach_metadata=False)
-    try_add_ppg(data)
+    # Keep the paper benchmark fixed at seven pipelines.
+    # try_add_ppg(data)
     rows = []
 
     def one(d):
@@ -133,9 +134,9 @@ def main() -> int:
                 "disease": d, "kendall_tau": tau, "kendall_p": p,
                 "raw_winner": g.loc[g["raw_auc"].idxmax(), "entry"],
                 "pcmvf_winner": g.loc[g["pcmvf_auc"].idxmax(), "entry"],
-                "mean_auc_drop": float((g["raw_auc"] - g["pcmvf_auc"]).mean()),
-                "n_headline_raw_gt_0.80": int((g["raw_auc"] > 0.80).sum()),
-                "n_headline_survive_pcmvf": int(((g["raw_auc"] > 0.80) & (g["pcmvf_auc"] > 0.80)).sum()),
+                "mean_delta_auc": float((g["pcmvf_auc"] - g["raw_auc"]).mean()),
+                "n_before_gt_0_80": int((g["raw_auc"] > 0.80).sum()),
+                "n_after_gt_0_80": int((g["pcmvf_auc"] > 0.80).sum()),
                 "n_entries_supported": int(g["pcmvf_label"].str.contains("supported").sum()),
             })
         C.save(ch, ns.out_dir, "leaderboard_changes.csv")

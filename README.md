@@ -108,7 +108,7 @@ Every analysis script accepts `--quick`, `--diseases …` and `--out-dir`.
 
 ## Reproducibility notes
 
-- **Fixed analysis specification:** median imputation, standardization, PLS (≤ 10 components) and class-balanced logistic regression (LIBLINEAR, C = 1), all fit on training folds only. Seeds are fixed (`--seed 2026`; 20 subsampling seeds). Confidence intervals come from the matched-pair bootstrap with 2,000 replicates.
+- **Fixed analysis specification:** median imputation, standardization, PLS (≤ 10 components) and class-balanced logistic regression (LIBLINEAR, C = 1), all fit on training folds only. Seeds are fixed (`--seed 2026`; 20 subsampling seeds). The original PCMVF confidence intervals use 2,000 stratified participant-bootstrap replicates. Matched-pair bootstrap is additionally used for the cognitive-impairment residual protocol analysis and the equivalence-testing experiments. All confidence intervals and testing procedures are described in the paper.
 - **Table 1 check:** `verify_reproduces_table1.py` reproduces the framework's pairs and AUCs exactly.
 - **Covariates:** `make_covariates.py` reproduces the covariates used in the paper exactly. Age "90 and above" is left missing.
 - **Figure 2D:** `make_figures.py` recomputes it with the PCMVF probe and folds. Values agree with the published panel to within 0.02.
