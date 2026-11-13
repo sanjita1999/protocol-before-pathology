@@ -1,0 +1,9 @@
+# Data and generated outputs are never committed (Bridge2AI data is under a data-use agreement)
+data/
+outputs/
+results/
+*.parquet
+*.pkl
+__pycache__/
+*.egg-info/
+.venv*/

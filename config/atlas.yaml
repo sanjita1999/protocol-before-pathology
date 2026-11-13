@@ -1,0 +1,195 @@
+project:
+  name: "Protocol Before Pathology (PCMVF)"
+  seed: 20260904
+  n_folds: 5
+  bootstrap_replicates: 2000
+  output_root: "outputs"
+
+# Set this to the directory containing phenotype/ and features/.
+data:
+  root: "${B2AI_ROOT}"   # Bridge2AI Voice v3.0.0 (PhysioNet, credentialed access)
+  recording_table: "phenotype/task/recording.tsv"
+  session_table: "phenotype/task/session.tsv"
+  demographics_table: "phenotype/demographics/demographics.tsv"
+  participant_table: "phenotype/enrollment/participant.tsv"
+  enrollment_table: "phenotype/enrollment/enrollment_form.tsv"
+  confounders_table: "phenotype/confounders/confounders.tsv"
+  diagnosis_dir: "phenotype/diagnosis"
+
+schema:
+  participant_id_candidates:
+    - participant_id
+    - participant
+    - subject_id
+    - subject
+    - person_id
+    - record_id
+    - recordid
+    - id
+  recording_id_candidates:
+    - recording_id
+    - recording
+    - audio_id
+    - file_id
+    - filename
+    - file_name
+    - resource_id
+    - id
+  task_candidates:
+    - task
+    - task_id
+    - task_name
+    - acoustic_task
+    - prompt
+    - protocol
+  session_id_candidates:
+    - session_id
+    - session
+    - visit_id
+    - visit
+  age_candidates:
+    - age
+    - age_years
+    - participant_age
+  sex_candidates:
+    - sex
+    - gender
+    - biological_sex
+    - sex_at_birth
+  site_candidates:
+    - site
+    - site_id
+    - collection_site
+    - location
+    - institution
+    - center
+  positive_value_candidates:
+    - diagnosis
+    - diagnosed
+    - present
+    - value
+    - status
+    - positive
+    - condition
+    - label
+
+cohort:
+  min_disease_n: 10
+  control_filename: "control.tsv"
+  exclude_multi_diagnosis: true
+  disease_files:
+    - airway_stenosis.tsv
+    - parkinsons_disease.tsv
+    - laryngeal_dystonia.tsv
+    - unilateral_vocal_fold_paralysis.tsv
+    - cognitive_impairment.tsv
+    - muscle_tension_dysphonia.tsv
+    - benign_lesions.tsv
+    - unexplained_chronic_cough.tsv
+    - precancerous_lesions.tsv
+
+# The eight feature families used in the submitted benchmark.
+# PPGs and torchaudio_pitch remain available in the dataset but are not primary here.
+representations:
+  spectrogram:
+    path: "features/torchaudio_spectrogram.parquet"
+    expected_dim: 201
+    pooling: "mean_time"
+  mel_spectrogram:
+    path: "features/torchaudio_mel_spectrogram.parquet"
+    expected_dim: 60
+    pooling: "mean_time"
+  mfcc:
+    path: "features/torchaudio_mfcc.parquet"
+    expected_dim: 60
+    pooling: "mean_time"
+  sparc_ema:
+    path: "features/sparc_ema.parquet"
+    expected_dim: 12
+    pooling: "mean_time"
+  pitch:
+    path: "features/sparc_pitch.parquet"
+    expected_dim: 1
+    pooling: "mean_std"
+  loudness:
+    path: "features/sparc_loudness.parquet"
+    expected_dim: 1
+    pooling: "mean_std"
+  periodicity:
+    path: "features/sparc_periodicity.parquet"
+    expected_dim: 1
+    pooling: "mean_std"
+  static:
+    path: "features/static_features.tsv"
+    expected_dim: 131
+    pooling: "static_numeric"
+
+# Primary pooled/task analyses concatenate participant-level vectors across the
+# eight families. If your AIAS implementation used a different fusion rule,
+# change this before the results freeze and document it.
+analysis:
+  primary_representation: "combined"
+  pls_max_components: 10
+  logistic_C: 1.0
+  logistic_solver: "liblinear"
+  logistic_max_iter: 3000
+  task_min_cases: 20
+  task_min_controls: 20
+  common_min_diseases: 5
+  common_min_tasks: 1
+  common_task_min_cases: 20
+  common_task_min_controls: 20
+  budget_candidates: [5, 10, 20]
+  budget_min_retention: 0.80
+  budget_repeats: 20
+  budget_select_disease_min_n: 20
+  rank_top_k: 3
+  permutation_repeats: 100
+  fixed_pls_components_ablation: 2
+
+covariates:
+  age: true
+  sex: true
+  site: false
+  # Optional: point this to the exact metadata CSV used by the prior AIAS
+  # sensitivity analysis (participant_id, age_numeric, sex_clean, site_clean).
+  metadata_file: "data/covariates.csv"   # built by scripts/make_covariates.py from phenotype/demographics
+  age_column: "age_numeric"
+  sex_column: "sex_clean"
+  site_column: null
+
+runtime:
+  n_jobs: -1
+  cache_recording_embeddings: true
+  fail_on_unfrozen_task_map: true
+
+
+# Reviewer-facing statistical hardening. These analyses do not replace the
+# frozen primary benchmark; they quantify sensitivity to split assignment and
+# test incremental demographic value / multiplicity-controlled task contrasts.
+acceptance_upgrade:
+  repeated_cv_repeats: 20
+  equal_cohort_case_n: 30
+  equal_cohort_repeats: 20
+  matched_age_caliper_sd: 0.25
+  disease_pair_min_n: 40
+  specificity_targets: [0.90, 0.95]
+  calibration_bins: 10
+
+
+# Model-capacity robustness for the ML4H atlas. These models are deliberately
+# secondary: the frozen PLS+logistic probe remains the primary estimand.
+model_robustness:
+  recording_budget: 20
+  mlp_hidden_layers: [64, 32]
+  mlp_alpha: 0.001
+  mlp_learning_rate_init: 0.001
+  mlp_max_iter: 2000
+  mil_hidden_dim: 64
+  mil_attention_dim: 32
+  mil_dropout: 0.15
+  mil_epochs: 60
+  mil_batch_size: 16
+  mil_learning_rate: 0.001
+  mil_weight_decay: 0.0001
+  mil_device: "auto"

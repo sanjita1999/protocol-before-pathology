@@ -1,0 +1,6 @@
+# Learned representations / external datasets (analyses e2_5, e3_1). GPU: install torch from the wheel index matching your CUDA version.
+torch==2.14.1
+torchaudio==2.11.0
+transformers==5.19.0
+soundfile==0.14.0
+opensmile==2.6.0
